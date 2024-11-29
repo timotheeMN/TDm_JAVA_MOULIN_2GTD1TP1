@@ -36,7 +36,10 @@ public class Main {
         Timer renderTimer = new Timer(50, (time) -> renderEngine.update());
         Timer physicTimer = new Timer(50, (time) -> physicEngine.update());
         Timer gameTimer = new Timer(50, (time) -> gameEngine.update());
-        Timer weatherTimer = new Timer(500, (time) -> {weatherEngine.update();renderEngine.toggleSnowstorm(weatherEngine.isSnowstormActive());});
+        Timer weatherTimer = new Timer(500, (time) -> {
+            weatherEngine.update();
+            renderEngine.toggleSnowstorm(weatherEngine.isSnowstormActive());
+        });
         Timer exitTimer = new Timer(15000, (time) -> playground.activateExit(renderEngine));
 
 
