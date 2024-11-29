@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.ArrayList;
 import java.awt.geom.Rectangle2D;
 import java.util.Iterator;
+import java.io.InputStreamReader;
 
 /**
  * Manages the game's map, including static elements (trees, grass, rocks),
@@ -21,11 +22,11 @@ public class Playground {
 
     public Playground(String pathName) {
         try {
-            final Image imageTree = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/arbre.png"));
-            final Image imageGrass = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/grass.png"));
-            final Image imageRock = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/dragon.png"));
-            final Image imageLightning = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/éclair.png"));
-            final Image imageExit = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/exit.png"));
+            final Image imageTree = ImageIO.read(getClass().getResource("/img/arbre.png"));
+            final Image imageGrass = ImageIO.read(getClass().getResource("/img/grass.png"));
+            final Image imageRock = ImageIO.read(getClass().getResource("/img/dragon.png"));
+            final Image imageLightning = ImageIO.read(getClass().getResource("/img/éclair.png"));
+            final Image imageExit = ImageIO.read(getClass().getResource("/img/exit.png"));
 
             final double imageTreeWidth = imageTree.getWidth(null);
             final double imageTreeHeight = imageTree.getHeight(null);
@@ -37,7 +38,7 @@ public class Playground {
             final double imageLightningHeight = imageLightning.getHeight(null);
 
             // Parse the map file
-            BufferedReader bufferedReader = new BufferedReader(new FileReader(pathName));
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(getClass().getResourceAsStream(pathName)));
             String line = bufferedReader.readLine();
             int lineNumber = 0;
             int columnNumber = 0;
