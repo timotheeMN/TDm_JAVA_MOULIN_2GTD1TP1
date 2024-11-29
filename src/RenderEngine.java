@@ -53,12 +53,14 @@ public class RenderEngine extends JPanel implements Engine {
     public void setHero(DynamicSprite hero) {
         this.hero = hero;
     }
-    public void setRenderList(List<Displayable> renderList) {
-        this.renderList = renderList;
-    }
+
     public void addToRenderList(Displayable displayable) {
         renderList.add(displayable);
     }
+    public void setRenderList(List<Displayable> renderList) {
+        this.renderList = renderList;
+    }
+
     public void updateRenderList(List<Displayable> updatedRenderList) {
         this.renderList = updatedRenderList;
         repaint();
