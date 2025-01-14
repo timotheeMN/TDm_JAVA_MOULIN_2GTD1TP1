@@ -1,0 +1,550 @@
+main:
+import javax.swing.JFrame;
+import javax.swing.Timer;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.File;
+import java.io.IOException;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        JFrame displayZoneFrame = new JFrame("Dungeon Crawler");
+        displayZoneFrame.setSize(400, 600);
+        displayZoneFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        RenderEngine renderEngine = new RenderEngine();
+        PhysicEngine physicEngine = new PhysicEngine();
+
+        BufferedImage walkingSpriteSheet  = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/myhero.png"));
+        BufferedImage runningSpriteSheet = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/myherorun.png"));
+
+
+        DynamicSprite hero = new DynamicSprite(walkingSpriteSheet, 10, 10, 31, 32);
+        hero.setDirection(Direction.EAST);
+        hero.setRunningSpriteSheet(runningSpriteSheet);
+
+
+        Playground playground = new Playground("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/map.txt");
+
+        for (Displayable displayable : playground.getSpriteList()) {
+            renderEngine.addToRenderList(displayable);
+        }
+
+        renderEngine.addToRenderList(hero);
+
+        physicEngine.setEnvironment(playground.getSolidSpriteList());
+        physicEngine.addToMovingSpriteList(hero);
+        physicEngine.setPlayground(playground);
+        physicEngine.setRenderEngine(renderEngine);
+
+
+        GameEngine gameEngine = new GameEngine(hero);
+        displayZoneFrame.getContentPane().add(renderEngine);
+        displayZoneFrame.addKeyListener(gameEngine);
+
+        renderEngine.setHero(hero);
+        Timer renderTimer = new Timer(50, (time) -> renderEngine.update());
+        Timer physicTimer = new Timer(50, (time) -> physicEngine.update());
+        Timer gameTimer = new Timer(50, (time) -> gameEngine.update());
+
+        renderTimer.start();
+        physicTimer.start();
+        gameTimer.start();
+
+        displayZoneFrame.setVisible(true);
+    }
+}
+
+Lightning: 
+import java.awt.Image;
+
+public class Lightning extends SolidSprite {
+    private final int staminaRestore = 50;
+
+    public Lightning(Image image, double x, double y, double width, double height) {
+        super(image, x, y, width, height);
+    }
+
+    public int getStaminaRestore() {
+        return staminaRestore;
+    }
+}
+
+PLayground: 
+import javax.imageio.ImageIO;
+import java.awt.Image;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.ArrayList;
+import java.awt.geom.Rectangle2D;
+import java.util.Iterator;
+
+public class Playground {
+    private final ArrayList<Sprite> environment = new ArrayList<>();
+    private final ArrayList<Lightning> lightnings = new ArrayList<>();
+
+    public Playground(String pathName) {
+        try {
+            final Image imageTree = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/arbre.png"));
+            final Image imageGrass = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/grass.png"));
+            final Image imageRock = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/dragon.png"));
+            final Image imageLightning = ImageIO.read(new File("C:/Users/Utilisateur/Dropbox/Timo/Scolaire_Timo/4 ENSEA/2eme_année/Java/TD/FISE_2024_2025_Dungeon_Crawler-master/img/éclair.png"));
+
+            final double imageTreeWidth = imageTree.getWidth(null);
+            final double imageTreeHeight = imageTree.getHeight(null);
+            final double imageGrassWidth = imageGrass.getWidth(null);
+            final double imageGrassHeight = imageGrass.getHeight(null);
+            final double imageRockWidth = imageRock.getWidth(null);
+            final double imageRockHeight = imageRock.getHeight(null);
+            final double imageLightningWidth = imageLightning.getWidth(null);
+            final double imageLightningHeight = imageLightning.getHeight(null);
+
+            BufferedReader bufferedReader = new BufferedReader(new FileReader(pathName));
+            String line = bufferedReader.readLine();
+            int lineNumber = 0;
+            int columnNumber = 0;
+
+            while (line != null) {
+                for (byte element : line.getBytes(StandardCharsets.UTF_8)) {
+                    switch (element) {
+                        case 'T' -> environment.add(new SolidSprite(imageTree, columnNumber * imageTreeWidth, lineNumber * imageTreeHeight, imageTreeWidth, imageTreeHeight));
+                        case ' ' -> environment.add(new Sprite(imageGrass, columnNumber * imageGrassWidth, lineNumber * imageGrassHeight, imageGrassWidth, imageGrassHeight));
+                        case 'R' -> environment.add(new SolidSprite(imageRock, columnNumber * imageRockWidth, lineNumber * imageRockHeight, imageRockWidth, imageRockHeight));
+                        case 'L' -> lightnings.add(new Lightning(imageLightning, columnNumber * imageLightningWidth, lineNumber * imageLightningHeight, imageLightningWidth, imageLightningHeight));
+                    }
+                    columnNumber++;
+                }
+                columnNumber = 0;
+                lineNumber++;
+                line = bufferedReader.readLine();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public List<SolidSprite> getSolidSpriteList() {
+        List<SolidSprite> solidSpriteList = new ArrayList<>();
+        for (Sprite sprite : environment) {
+            if (sprite instanceof SolidSprite solidSprite) {
+                solidSpriteList.add(solidSprite);
+            }
+        }
+        return solidSpriteList;
+    }
+
+    public List<Lightning> getLightnings() {
+        return lightnings;
+    }
+
+    public ArrayList<Displayable> getSpriteList() {
+        ArrayList<Displayable> displayableArrayList = new ArrayList<>();
+        for (Sprite sprite : environment) {
+            displayableArrayList.add(sprite);
+        }
+        displayableArrayList.addAll(lightnings); // Ajoute les éclairs aux éléments affichables
+        return displayableArrayList;
+    }
+
+    public void handleLightningCollisions(DynamicSprite hero, RenderEngine renderEngine) {
+        Iterator<Lightning> iterator = lightnings.iterator();
+
+        while (iterator.hasNext()) {
+            Lightning lightning = iterator.next();
+
+            // Hitbox du héros et de l'éclair
+            Rectangle2D.Double heroHitBox = new Rectangle2D.Double(hero.getX(), hero.getY(), hero.getWidth(), hero.getHeight());
+            Rectangle2D.Double lightningHitBox = new Rectangle2D.Double(lightning.getX(), lightning.getY(), lightning.getWidth(), lightning.getHeight());
+
+            if (heroHitBox.intersects(lightningHitBox)) {
+                // Collision détectée, régénère l'endurance
+                hero.setStamina(Math.min(hero.getStamina() + lightning.getStaminaRestore(), 100));
+
+                // Supprime l'éclair
+                iterator.remove();
+                renderEngine.updateRenderList(getSpriteList());
+            }
+        }
+    }
+
+}
+PhysicEngine:
+import java.util.ArrayList;
+import java.util.List;
+
+public class PhysicEngine implements Engine {
+    private final List<DynamicSprite> movingSpriteList;
+    private List<SolidSprite> environment;
+    private Playground playground;
+    private RenderEngine renderEngine;
+
+    public PhysicEngine() {
+        this.movingSpriteList = new ArrayList<>();
+        this.environment = new ArrayList<>();
+    }
+
+    public void setPlayground(Playground playground) {
+        this.playground = playground;
+    }
+
+    public void addToMovingSpriteList(DynamicSprite sprite) {
+        movingSpriteList.add(sprite);
+    }
+
+    public void setEnvironment(List<SolidSprite> environment) {
+        this.environment = environment;
+    }
+
+    public void setRenderEngine(RenderEngine renderEngine) {
+        this.renderEngine = renderEngine;
+    }
+
+    @Override
+    public void update() {
+        int screenWidth = 400;
+        int screenHeight = 600;
+
+        for (DynamicSprite sprite : movingSpriteList) {
+            sprite.moveIfPossible(new ArrayList<>(environment), screenWidth, screenHeight);
+
+            // Appelle la gestion des collisions avec les éclairs
+            if (playground != null) {
+                playground.handleLightningCollisions(sprite, renderEngine);
+            }
+
+            // Rafraîchit le rendu après mise à jour
+            if (renderEngine != null) {
+                renderEngine.updateRenderList(playground.getSpriteList());
+            }
+        }
+    }
+}
+
+
+GameEngine:
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
+public class GameEngine implements Engine, KeyListener {
+    private final DynamicSprite hero;
+    private boolean isRunning;
+
+    public GameEngine(DynamicSprite hero) {
+        this.hero = hero;
+    }
+
+    @Override
+    public void update() {
+        hero.updateStamina();
+    }
+
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_UP -> hero.setDirection(Direction.NORTH);
+            case KeyEvent.VK_DOWN -> hero.setDirection(Direction.SOUTH);
+            case KeyEvent.VK_LEFT -> hero.setDirection(Direction.WEST);
+            case KeyEvent.VK_RIGHT -> hero.setDirection(Direction.EAST);
+            case KeyEvent.VK_SHIFT -> {
+                isRunning = true;
+                hero.setRunning(isRunning);
+            }
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        if (e.getKeyCode() == KeyEvent.VK_SHIFT) {
+            isRunning = false;
+            hero.setRunning(isRunning);
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+    }
+}
+
+
+SolideSprite:
+import java.awt.Image;
+
+public class SolidSprite extends Sprite {
+    public SolidSprite(Image image, double x, double y, double width, double height) {
+        super(image, x, y, width, height);
+    }
+}
+
+Direction: 
+public enum Direction {
+    NORTH(3),
+    SOUTH(0),
+    EAST(2),
+    WEST(1);
+
+    private final int frameLineNumber;
+
+    Direction(int frameLineNumber) {
+        this.frameLineNumber = frameLineNumber;
+    }
+
+    public int getFrameLineNumber() {
+        return frameLineNumber;
+    }
+}
+
+DynamicSprite: 
+import java.awt.Graphics;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+
+public class DynamicSprite extends SolidSprite {
+    private boolean isWalking = true;
+    private boolean isRunning = false;
+    private double baseSpeed = 5.0;
+    private double runningSpeed = 10.0;
+    private double speed = baseSpeed;
+    private int stamina = 100;
+    private final int maxStamina = 100;
+    private final int staminaCost = 2;
+    private final int staminaRegen = 1;
+    private final int spriteSheetNumberOfColumn = 3;
+    private int timeBetweenFrame = 200;
+    private Direction direction;
+
+    private BufferedImage runningSpriteSheet;
+
+    public DynamicSprite(BufferedImage walkingSpriteSheet, int x, int y, int width, int height) {
+        super(walkingSpriteSheet, x, y, width, height);
+    }
+
+    public void setRunningSpriteSheet(BufferedImage runningSpriteSheet) {
+        this.runningSpriteSheet = runningSpriteSheet;
+    }
+
+    public void setDirection(Direction direction) {
+        this.direction = direction;
+    }
+
+    public void setRunning(boolean isRunning) {
+        if (stamina > 0) {
+            this.isRunning = isRunning;
+        } else {
+            this.isRunning = false;
+        }
+        updateSpeed();
+    }
+
+    private void updateSpeed() {
+        speed = isRunning ? runningSpeed : baseSpeed;
+    }
+
+    public void updateStamina() {
+        if (isRunning) {
+            stamina -= staminaCost;
+            if (stamina < 0) {
+                stamina = 0;
+                isRunning = false;
+                updateSpeed();
+            }
+        } else if (stamina < maxStamina) {
+            stamina += staminaRegen;
+            if (stamina > maxStamina) {
+                stamina = maxStamina;
+            }
+        }
+    }
+
+    public void setStamina(int stamina) {
+        this.stamina = Math.max(0, Math.min(stamina, maxStamina)); // Clamp entre 0 et maxStamina
+    }
+    public int getStamina() {
+        return stamina;
+    }
+
+    @Override
+    public void draw(Graphics g) {
+        if (direction == null) {
+            super.draw(g);
+            return;
+        }
+
+        BufferedImage currentSpriteSheet = isRunning && runningSpriteSheet != null ? runningSpriteSheet : (BufferedImage) getImage();
+
+        if (currentSpriteSheet instanceof BufferedImage spriteSheet) {
+            long currentTime = System.currentTimeMillis();
+            int index = (int) ((currentTime / timeBetweenFrame) % spriteSheetNumberOfColumn);
+            int attitude = direction.getFrameLineNumber();
+
+            int frameWidth = (int) getWidth();
+            int frameHeight = (int) getHeight();
+
+            int sourceX = index * frameWidth;
+            int sourceY = attitude * frameHeight;
+            int sourceX2 = sourceX + frameWidth;
+            int sourceY2 = sourceY + frameHeight;
+
+            g.drawImage(
+                    spriteSheet,
+                    (int) getX(), (int) getY(),
+                    (int) (getX() + getWidth()), (int) (getY() + getHeight()),
+                    sourceX, sourceY,
+                    sourceX2, sourceY2,
+                    null
+            );
+        } else {
+            super.draw(g);
+        }
+    }
+
+
+    private void move() {
+        switch (direction) {
+            case NORTH -> this.setY(this.getY() - speed);
+            case SOUTH -> this.setY(this.getY() + speed);
+            case WEST -> this.setX(this.getX() - speed);
+            case EAST -> this.setX(this.getX() + speed);
+        }
+    }
+
+
+    private boolean isMovingPossible(ArrayList<Sprite> environment, int screenWidth, int screenHeight) {
+        double futureX = this.getX();
+        double futureY = this.getY();
+
+        switch (direction) {
+            case NORTH -> futureY -= speed;
+            case SOUTH -> futureY += speed;
+            case WEST -> futureX -= speed;
+            case EAST -> futureX += speed;
+        }
+
+        if (futureX < 0 || futureX + getWidth() > screenWidth || futureY < 0 || futureY + getHeight() > screenHeight) {
+            return false;
+        }
+
+        Rectangle2D.Double hitBox = new Rectangle2D.Double(
+                futureX, futureY, getWidth(), getHeight()
+        );
+
+        for (Sprite sprite : environment) {
+            if (sprite instanceof SolidSprite && sprite != this) {
+                Rectangle2D.Double otherHitBox = new Rectangle2D.Double(
+                        sprite.getX(), sprite.getY(), sprite.getWidth(), sprite.getHeight()
+                );
+
+                if (hitBox.intersects(otherHitBox)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+
+    public void moveIfPossible(ArrayList<Sprite> environment, int screenWidth, int screenHeight) {
+        if (isMovingPossible(environment, screenWidth, screenHeight)) {
+            move();
+        }
+    }
+
+    public void setX(double x) {
+        super.x = x;
+    }
+
+    public void setY(double y) {
+        super.y = y;
+    }
+}
+
+Engine: 
+public interface Engine {
+    void update();
+}
+
+Render Engine: 
+
+import javax.swing.JPanel;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RenderEngine extends JPanel implements Engine {
+    private List<Displayable> renderList;
+    private DynamicSprite hero;
+    public RenderEngine() {
+        renderList = new ArrayList<>();
+    }
+
+    public void setHero(DynamicSprite hero) {
+        this.hero = hero;
+    }
+    public void setRenderList(List<Displayable> renderList) {
+        this.renderList = renderList;
+    }
+    public void updateRenderList(List<Displayable> updatedRenderList) {
+        this.renderList = updatedRenderList; // Met à jour la liste affichée
+        repaint(); // Rafraîchit l'écran immédiatement
+    }
+
+    public void addToRenderList(Displayable displayable) {
+        renderList.add(displayable);
+    }
+    @Override
+    public void update() {
+        repaint();
+    }
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        for (Displayable displayable : renderList) {
+            if (displayable != hero) { // Évite de dessiner le héros ici
+                displayable.draw(g);
+            }
+        }
+        if (hero != null) {
+            hero.draw(g);
+        }
+        renderList.stream()
+                .filter(d -> d instanceof DynamicSprite)
+                .findFirst()
+                .ifPresent(displayable -> {
+                    DynamicSprite hero = (DynamicSprite) displayable;
+
+                    int maxStamina = 100; // Stamina maximale pour calculer la jauge
+                    int stamina = hero.getStamina();
+                    int barWidth = 200; // Largeur de la barre d'endurance
+                    int barHeight = 20; // Hauteur de la barre d'endurance
+                    int xPosition = 10; // Position X de la barre
+                    int yPosition = 10; // Position Y de la barre
+
+                    // Rectangle de fond
+                    g.setColor(Color.GRAY);
+                    g.fillRect(xPosition, yPosition, barWidth, barHeight);
+
+                    // Partie remplie en fonction de l'endurance
+                    g.setColor(Color.GREEN);
+                    g.fillRect(xPosition, yPosition, (stamina * barWidth) / maxStamina, barHeight);
+
+                    // Contour du rectangle
+                    g.setColor(Color.BLACK);
+                    g.drawRect(xPosition, yPosition, barWidth, barHeight);
+
+                    // Texte au centre
+                    g.setColor(Color.BLACK);
+                    String staminaText = "Stamina: " + stamina + " / " + maxStamina;
+                    int textWidth = g.getFontMetrics().stringWidth(staminaText);
+                    int textHeight = g.getFontMetrics().getHeight();
+                    g.drawString(staminaText, xPosition + (barWidth - textWidth) / 2, yPosition + (barHeight + textHeight) / 2 - 4);
+                });
+        }
+    }
